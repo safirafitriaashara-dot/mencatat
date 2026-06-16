@@ -1,0 +1,590 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>    
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+    <title>Catat Harian Keuangan</title>
+
+    <!-- PWA & Meta -->
+    <meta name="theme-color" content="#2563eb">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Catat Harian">
+    <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/3135/3135715.png">
+    <link rel="icon" type="image/png" href="https://cdn-icons-png.flaticon.com/512/3135/3135715.png">
+    
+    <style>
+        :root {
+            --primary-color: #2563eb;
+            --primary-dark: #1e40af;
+            --success-color: #10b981;
+            --danger-color: #ef4444;
+            --bg-color: #f3f4f6;
+            --card-bg: #ffffff;
+            --text-main: #1f2937;
+            --text-secondary: #6b7280;
+            --border-radius: 12px;
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; -webkit-tap-highlight-color: transparent; }
+        
+        body { background-color: var(--bg-color); color: var(--text-main); padding-bottom: 60px; min-height: 100vh; }
+
+        .app-container { max-width: 480px; margin: 0 auto; padding: 20px; position: relative; }
+
+        /* HEADER */
+        header {
+            background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
+            color: white;
+            padding: 15px 20px 10px 20px;
+            border-radius: 0 0 0 0;
+            margin: -20px -20px 0 -20px;
+        }
+
+        .total-area {
+            text-align: center;
+            padding-bottom: 5px;
+        }
+        .total-label { font-size: 0.8rem; font-weight: 400; opacity: 0.9; }
+        .total-amount { font-size: 1.8rem; font-weight: 700; margin-top: 2px; text-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+
+        /* --- VISIBLE CALENDAR (Minimalis & Kecil) --- */
+        .visible-calendar-container {
+            background: white;
+            padding: 8px 15px; /* Padding lebih tipis */
+            margin: 0 -20px 20px -20px;
+            position: relative;
+            z-index: 10;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05); /* Bayangan lebih halus */
+        }
+
+        .calendar-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 5px; /* Jarak judul lebih dekat */
+            font-weight: 700;
+            color: var(--text-main);
+            font-size: 0.95rem;
+        }
+
+        .calendar-nav-btn {
+            background: #f3f4f6;
+            border: none;
+            border-radius: 50%;
+            width: 28px;
+            height: 28px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            color: var(--primary-color);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 2px; /* Jarak antar tanggal sangat rapat */
+            text-align: center;
+        }
+
+        .cal-day-name {
+            font-size: 0.6rem;
+            color: #9ca3af; /* Warna lebih pudar */
+            font-weight: 600;
+            padding-bottom: 4px;
+            text-transform: uppercase;
+        }
+
+        .cal-day {
+            aspect-ratio: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.8rem; /* Font tanggal lebih kecil */
+            cursor: pointer;
+            color: var(--text-main);
+            transition: all 0.2s;
+            /* Ukuran lingkaran dibatasi agar tidak terlalu besar */
+            width: 32px;
+            height: 32px;
+            margin: 0 auto;
+            border-radius: 50%;
+        }
+
+        /* Style untuk tanggal yang DIPILIH (Biru Solid) */
+        .cal-day.selected {
+            background-color: var(--primary-color);
+            color: white;
+            font-weight: bold;
+            box-shadow: 0 1px 3px rgba(37, 99, 235, 0.3);
+        }
+
+        /* Style untuk tanggal yang SUDAH LUNAS (Cincin Hijau - Minimalis) */
+        .cal-day.fully-paid {
+            background-color: transparent; /* Transparan, bukan blok warna */
+            color: var(--success-color);
+            font-weight: 700;
+            border: 1.5px solid var(--success-color); /* Garis pinggir hijau tipis */
+        }
+        
+        .cal-day.fully-paid:hover {
+            background-color: #ecfdf5; /* Sedikit hijau saat di-hover */
+        }
+
+        /* Jika tanggal yang sudah lunas juga sedang dipilih -> Menjadi Hijau Solid */
+        .cal-day.fully-paid.selected {
+            background-color: var(--success-color);
+            color: white;
+            border-color: var(--success-color);
+        }
+
+        /* CHECKLIST ITEMS */
+        .checklist-item {
+            background: var(--card-bg);
+            padding: 14px;
+            margin-bottom: 10px;
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            transition: all 0.2s;
+            cursor: pointer;
+            border-left: 5px solid transparent;
+        }
+
+        .checklist-item:active { transform: scale(0.98); }
+        
+        .checklist-item.checked {
+            background-color: #f0fdf4;
+            border-left-color: var(--success-color);
+        }
+        
+        .checklist-item.checked .item-title { text-decoration: line-through; color: var(--text-secondary); }
+
+        .item-info { display: flex; align-items: center; gap: 12px; flex: 1; }
+
+        .checkbox-custom {
+            width: 24px; height: 24px; border: 2px solid #d1d5db; border-radius: 6px;
+            display: flex; align-items: center; justify-content: center; transition: all 0.2s;
+            flex-shrink: 0;
+        }
+        .checklist-item.checked .checkbox-custom { background-color: var(--success-color); border-color: var(--success-color); }
+        .checkbox-custom::after { content: '✔'; color: white; font-size: 12px; display: none; }
+        .checklist-item.checked .checkbox-custom::after { display: block; }
+
+        .item-details { display: flex; flex-direction: column; }
+        .item-title { font-weight: 600; font-size: 0.95rem; }
+        .item-subtitle { font-size: 0.75rem; color: var(--text-secondary); }
+        .item-price { font-weight: 700; color: var(--primary-color); font-size: 1rem; }
+        .checklist-item.checked .item-price { color: var(--success-color); }
+
+        /* SUMMARY BOXES */
+        .recap-box {
+            background: #e0f2fe;
+            border: 1px solid #bae6fd;
+            color: #0369a1;
+            padding: 12px;
+            border-radius: var(--border-radius);
+            margin-bottom: 15px;
+            font-size: 0.85rem;
+            display: none;
+        }
+        .recap-box strong { font-weight: 700; }
+        .recap-items { margin-top: 5px; display: flex; flex-wrap: wrap; gap: 4px; }
+        .recap-tag { background: white; padding: 2px 6px; border-radius: 4px; font-size: 0.75rem; font-weight: 600; }
+
+        .summary-section {
+            margin-top: 30px;
+            padding-top: 15px;
+            border-top: 2px dashed #d1d5db;
+        }
+        
+        .summary-title {
+            font-size: 0.9rem;
+            font-weight: 700;
+            color: var(--text-secondary);
+            margin-bottom: 12px;
+            text-align: center;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .summary-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        .summary-card {
+            background: white;
+            padding: 12px;
+            border-radius: 8px;
+            box-shadow: var(--shadow);
+            border: 1px solid #e5e7eb;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+        }
+
+        .summary-label { font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 4px; }
+        .summary-total { font-size: 1rem; font-weight: 800; color: var(--primary-color); }
+
+        /* RESET BUTTON */
+        .reset-container { margin-top: 25px; text-align: center; }
+        .reset-btn {
+            background-color: #fee2e2;
+            color: #b91c1c;
+            border: 1px solid #fecaca;
+            padding: 10px;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            width: 100%;
+            transition: background 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        .reset-btn:active { background-color: #fecaca; }
+
+        /* TOAST */
+        #toast {
+            visibility: hidden; min-width: 250px; background-color: #333; color: #fff;
+            text-align: center; border-radius: 50px; padding: 12px; position: fixed;
+            z-index: 99; left: 50%; bottom: 30px; transform: translateX(-50%);
+            font-size: 0.9rem; opacity: 0; transition: opacity 0.3s, bottom 0.3s;
+        }
+        #toast.show { visibility: visible; opacity: 1; bottom: 50px; }
+    </style>
+</head>
+<body>
+
+    <div class="app-container">
+        <!-- Header -->
+        <header>
+            <div class="total-area">
+                <div class="total-label" id="dateLabel">Hari Ini</div>
+                <div class="total-amount" id="totalAmount">Rp 0</div>
+            </div>
+        </header>
+
+        <!-- KALENDER MINIMALIS -->
+        <div class="visible-calendar-container">
+            <div class="calendar-header">
+                <button class="calendar-nav-btn" onclick="changeCalendarMonth(-1)">&#10094;</button>
+                <span id="calendarMonthYear">Bulan Tahun</span>
+                <button class="calendar-nav-btn" onclick="changeCalendarMonth(1)">&#10095;</button>
+            </div>
+            <div class="calendar-grid">
+                <div class="cal-day-name">Min</div>
+                <div class="cal-day-name">Sen</div>
+                <div class="cal-day-name">Sel</div>
+                <div class="cal-day-name">Rab</div>
+                <div class="cal-day-name">Kam</div>
+                <div class="cal-day-name">Jum</div>
+                <div class="cal-day-name">Sab</div>
+                <!-- Tanggal akan di-generate lewat JS -->
+            </div>
+        </div>
+
+        <!-- Kotak Rekap (Belum Lunas) -->
+        <div id="recapBox" class="recap-box">
+            <div>📝 <strong>Belum Lunas:</strong></div>
+            <div class="recap-items" id="recapItemsList"></div>
+        </div>
+
+        <main id="checklistContainer">
+            <!-- List Item -->
+        </main>
+
+        <!-- BAGIAN REKAP TOTAL KATEGORI -->
+        <div class="summary-section">
+            <div class="summary-title">Rekap Akumulasi Total</div>
+            <div class="summary-grid">
+                <div class="summary-card">
+                    <span class="summary-label">Total BRI</span>
+                    <span class="summary-total" id="grandTotal_1">Rp 0</span>
+                </div>
+                <div class="summary-card">
+                    <span class="summary-label">Pembayaran Sekolah</span>
+                    <span class="summary-total" id="grandTotal_2">Rp 0</span>
+                </div>
+                <div class="summary-card">
+                    <span class="summary-label">Sunat Rafli</span>
+                    <span class="summary-total" id="grandTotal_3">Rp 0</span>
+                </div>
+                <div class="summary-card">
+                    <span class="summary-label">Melunasi Hutang</span>
+                    <span class="summary-total" id="grandTotal_4">Rp 0</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tombol Reset -->
+        <div class="reset-container">
+            <button class="reset-btn" onclick="resetDateData()">
+                🗑️ Reset Data Tanggal Ini
+            </button>
+        </div>
+    </div>
+
+    <div id="toast">Notifikasi</div>
+
+    <script>
+        // --- KONFIGURASI ---
+        const defaultItems = [
+            { id: 1, name: 'BRI', amount: 30000 },
+            { id: 2, name: 'Pembayaran Sekolah', amount: 15000 },
+            { id: 3, name: 'Sunat Rafli', amount: 10000 },
+            { id: 4, name: 'Melunasi Hutang', amount: 5000 }
+        ];
+
+        let allData = {}; 
+        let currentDateStr = ""; 
+        let calendarDate = new Date();
+
+        // --- INIT ---
+        const init = () => {
+            const savedData = localStorage.getItem('aplikasiHarian_Data');
+            if (savedData) {
+                allData = JSON.parse(savedData);
+            } else {
+                allData = {};
+            }
+
+            const today = new Date();
+            currentDateStr = formatDateToInput(today);
+            calendarDate = new Date(today);
+
+            renderView();
+        };
+
+        // --- FUNGSI TANGGAL UTAMA ---
+        const formatDateToInput = (date) => {
+            const offset = date.getTimezoneOffset();
+            const localDate = new Date(date.getTime() - (offset*60*1000));
+            return localDate.toISOString().split('T')[0];
+        };
+
+        const formatIDDate = (dateStr) => {
+            const options = { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' };
+            return new Date(dateStr).toLocaleDateString('id-ID', options);
+        };
+
+        const selectDate = (dateStr) => {
+            currentDateStr = dateStr;
+            renderView();
+        };
+
+        // --- FUNGSI KALENDER ---
+        const changeCalendarMonth = (delta) => {
+            calendarDate.setMonth(calendarDate.getMonth() + delta);
+            renderView();
+        };
+
+        const renderCalendarGrid = () => {
+            const year = calendarDate.getFullYear();
+            const month = calendarDate.getMonth();
+            
+            const monthNames = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
+            document.getElementById('calendarMonthYear').textContent = `${monthNames[month]} ${year}`;
+
+            const grid = document.querySelector('.calendar-grid');
+            while (grid.children.length > 7) {
+                grid.removeChild(grid.lastChild);
+            }
+
+            const firstDayOfMonth = new Date(year, month, 1).getDay();
+            const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+            for (let i = 0; i < firstDayOfMonth; i++) {
+                const emptyCell = document.createElement('div');
+                grid.appendChild(emptyCell);
+            }
+
+            for (let day = 1; day <= daysInMonth; day++) {
+                const dateObj = new Date(year, month, day);
+                const dateStr = formatDateToInput(dateObj);
+                
+                const btn = document.createElement('div');
+                btn.className = 'cal-day';
+                btn.textContent = day;
+
+                if (dateStr === currentDateStr) {
+                    btn.classList.add('selected');
+                }
+
+                if (allData[dateStr]) {
+                    let isPaid = true;
+                    for (const item of defaultItems) {
+                        if (allData[dateStr][item.id] !== true) {
+                            isPaid = false;
+                            break;
+                        }
+                    }
+                    if (isPaid) {
+                        btn.classList.add('fully-paid');
+                    }
+                }
+
+                btn.onclick = () => selectDate(dateStr);
+                grid.appendChild(btn);
+            }
+        };
+
+        // --- FUNGSI RESET ---
+        const resetDateData = () => {
+            const dateDisplay = new Date(currentDateStr).toLocaleDateString('id-ID', {weekday:'long', day:'numeric', month:'long'});
+            
+            if(confirm(`Yakin ingin mereset semua data di tanggal ${dateDisplay} menjadi kosong?`)) {
+                let currentData = allData[currentDateStr];
+                
+                if (!currentData) {
+                    currentData = {};
+                    defaultItems.forEach(item => currentData[item.id] = false);
+                }
+
+                let changed = false;
+                defaultItems.forEach(item => {
+                    if (currentData[item.id] === true) {
+                        currentData[item.id] = false;
+                        changed = true;
+                    }
+                });
+
+                allData[currentDateStr] = currentData;
+                saveAllData();
+                renderView();
+                
+                if(changed) {
+                    showToast("Data tanggal ini di-reset");
+                } else {
+                    showToast("Data sudah kosong");
+                }
+            }
+        };
+
+        // --- CORE LOGIC ---
+        const getCurrentDateData = () => {
+            if (!allData[currentDateStr]) {
+                let newState = {};
+                defaultItems.forEach(item => newState[item.id] = false);
+                allData[currentDateStr] = newState;
+            }
+            return allData[currentDateStr];
+        };
+
+        const toggleItem = (id) => {
+            const currentData = getCurrentDateData();
+            currentData[id] = !currentData[id];
+            
+            saveAllData();
+            renderView();
+            
+            const isChecked = currentData[id];
+            showToast(isChecked ? "Dicatat" : "Dibatalkan");
+        };
+
+        const saveAllData = () => {
+            localStorage.setItem('aplikasiHarian_Data', JSON.stringify(allData));
+        };
+
+        // --- RENDER UI ---
+        const renderView = () => {
+            document.getElementById('dateLabel').textContent = formatIDDate(currentDateStr);
+            renderCalendarGrid();
+
+            const currentData = getCurrentDateData();
+            const container = document.getElementById('checklistContainer');
+            container.innerHTML = '';
+
+            let total = 0;
+            let missingItems = [];
+
+            defaultItems.forEach(item => {
+                const isChecked = currentData[item.id];
+                
+                if (isChecked) {
+                    total += item.amount;
+                } else {
+                    missingItems.push(item.name);
+                }
+
+                const div = document.createElement('div');
+                div.className = `checklist-item ${isChecked ? 'checked' : ''}`;
+                div.onclick = () => toggleItem(item.id);
+                
+                div.innerHTML = `
+                    <div class="item-info">
+                        <div class="checkbox-custom"></div>
+                        <div class="item-details">
+                            <span class="item-title">${item.name}</span>
+                            <span class="item-subtitle">Target Harian</span>
+                        </div>
+                    </div>
+                    <div class="item-price">${formatRupiah(item.amount)}</div>
+                `;
+                container.appendChild(div);
+            });
+
+            document.getElementById('totalAmount').textContent = formatRupiah(total);
+
+            const recapBox = document.getElementById('recapBox');
+            const recapList = document.getElementById('recapItemsList');
+            
+            if (missingItems.length > 0) {
+                recapBox.style.display = 'block';
+                recapList.innerHTML = missingItems
+                    .map(name => `<span class="recap-tag">${name}</span>`)
+                    .join('');
+            } else {
+                recapBox.style.display = 'none';
+            }
+
+            calculateAndRenderGrandTotals();
+        };
+
+        const calculateAndRenderGrandTotals = () => {
+            defaultItems.forEach(item => {
+                let accumulatedTotal = 0;
+
+                for (const dateKey in allData) {
+                    const dailyData = allData[dateKey];
+                    if (dailyData[item.id] === true) {
+                        accumulatedTotal += item.amount;
+                    }
+                }
+
+                const el = document.getElementById(`grandTotal_${item.id}`);
+                if (el) {
+                    el.textContent = formatRupiah(accumulatedTotal);
+                }
+            });
+        };
+
+        const formatRupiah = (number) => {
+            return new Intl.NumberFormat('id-ID', { 
+                style: 'currency', currency: 'IDR', minimumFractionDigits: 0 
+            }).format(number);
+        };
+
+        const showToast = (msg) => {
+            const toast = document.getElementById("toast");
+            toast.textContent = msg;
+            toast.className = "show";
+            setTimeout(() => { toast.className = toast.className.replace("show", ""); }, 2000);
+        };
+
+        document.addEventListener('DOMContentLoaded', init);
+
+    </script>
+</body>
+</html>
